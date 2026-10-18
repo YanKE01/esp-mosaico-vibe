@@ -4,33 +4,42 @@ These rules supplement the [repository rules](../AGENTS.md) for applications in
 `projects/`. Apply them to new or changed application-owned ESP-IDF modules;
 preserve existing public API compatibility and dependency-owned code conventions.
 
-## C module design
+## Development Guidelines
 
-- Implement application modules in C, not C++. Use opaque handles for stateful
-  modules: `typedef struct xxx_t *xxx_handle_t;`. Stateless utilities need no object.
-- Define instance structs in `.c` files, or private implementation headers when
-  shared across source files. Public headers expose only handles, configuration,
-  events, callbacks and public APIs.
-- Use ESP-IDF-style names such as `xxx_create/delete/start/stop/read/write/set/get`,
-  following the component prefix. Instance methods take `xxx_handle_t handle` first;
-  create takes `const xxx_config_t *config` and `xxx_handle_t *ret_handle`.
-  Prefer `esp_err_t` for fallible public APIs.
-- Prefer instance-owned mutable runtime state. Pair object resource acquisition
-  and release in `create/delete`; `start/stop` may manage running-state resources.
-  Roll back failures and stop tasks, timers and callbacks from accessing resources
-  before freeing them. Delete must release all resources owned by the instance.
-- Protect shared mutable state using suitable synchronization, such as mutexes,
-  queues or atomics, or a documented single-task owner; account for ISR access.
-- Use `xxx_register_cb()` for callback registration where applicable, with the
-  handle, event and user context. Document callback execution context, event-data
-  and user-context lifetimes, and unregister/delete behavior.
-- Introduce `xxx_ops_t` function tables and first-member base structs only when
-  multiple implementations need a common interface; keep them in private headers.
+1. **Organize components by responsibility and keep the entry point minimal.** `app_main()` should only handle initialization, dependency wiring, and startup sequencing. Keep component dependency directions clear; circular dependencies are prohibited.
+
+2. **Define contracts for public interfaces.** Briefly and clearly document parameter ranges, units, ownership, calling context, thread safety, timeouts, and error codes. Each component’s README must describe its responsibilities, dependencies, and minimal usage. Comments should explain design rationale and constraints.
+
+3. **Distinguish application components from third-party components.** Use the `app_` prefix for application components. Preserve the original names of third-party components and manage them centrally. Do not directly modify components in `managed_components/`; apply changes through patches.
+
+4. **Separate public interfaces from internal implementations.** Place public headers in `include/` and expose internal headers only through private include paths. Components must not include other components’ private headers or access their internal structures.
+
+5. **Encapsulate module state.** Manage state through private contexts or classes. Avoid scattered global variables. Exchanging application state through cross-module `extern` global variables is prohibited.
+
+6. **Prefer composition and limit abstractions.** Compose functionality through members, contexts, and small interfaces. Avoid inheritance hierarchies and generic frameworks that serve no practical purpose.
+
+7. **Actively use Git for code management.** Before starting, check the current branch, `git status`, and existing diffs. Use a separate branch for each independent task, such as `feat/xxx` or `fix/xxx`. For parallel tasks, use separate worktrees under `Projects` to avoid modifying the same working directory concurrently.
+
+8. **Keep commits focused and reviewable.** Each commit should serve one clear purpose. Commit functional changes, refactoring, and formatting-only changes separately.
+
+## Debugging Guidelines
+
+1. **Prefer structured interfaces.** Use CLI/RPC interfaces with clear semantics to query connection status, firmware identity, memory usage, and operation results.
+
+2. **Read diagnostic information within a defined scope.** Filter logs by time range, keyword, or failure. Save complete logs and core dumps as files, and let the model read relevant sections as needed.
+
+3. **Delegate repetitive workflows to programs.** Prefer scripts, simulators, and automated assertions. Configure timeouts, state checks, and bounded retries, and return summaries with evidence of failures.
+
+4. **Take screenshots as needed.** Use screenshots to diagnose layout, text, and rendering issues and to verify key steps. Avoid taking screenshots after every action or repeatedly inspecting unchanged screens.
+
+5. **Interact with the screen with a clear purpose.** Use touch, swipe, and coordinate-based clicks to verify real interactions or perform functions that lack usable interfaces. Avoid long sequences of blind actions. When testing UI flows, do not replace interaction validation with direct calls to application logic. 
+
 
 ## Stack and allocation
 
 - Avoid local arrays or aggregate objects larger than 128 bytes on task stacks
   unless justified by the task's stack budget, including the call chain.
   Prefer instance-owned buffers; do not move mutable buffers to hidden globals.
+  
 - Prefer reusable instance buffers, memory pools or ring buffers in high-frequency
   or latency-sensitive paths. Avoid repeated heap allocation in those paths.

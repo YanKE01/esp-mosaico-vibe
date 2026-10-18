@@ -46,12 +46,3 @@ restarting with AI released follows the existing OTA selection, if it is valid.
 Application updates select and boot the installed app; verify its identity,
 health and intended behavior. After ROM restoration, verify Vibe Mode readiness
 before installing the intended application.
-
-## Technical names
-
-`Recovery` remains the technical name for the retained firmware, its ABI and
-integration contract. The directory `esp-mosaico-recovery/`, `factory` partition,
-`firmware_mode=recovery`, commands and API identifiers retain their names.
-ESP-Iris Workbench may display **Recovery**, **Factory Recovery** or **Recovery
-firmware**; on ESP-Mosaico these refer to Vibe Mode. The state `needs_recovery`
-describes a condition requiring attention, not the current firmware mode.

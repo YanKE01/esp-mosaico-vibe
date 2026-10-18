@@ -40,10 +40,3 @@ Vibe Mode，不安装固件。应用更新命令会自动管理这一切换。
 有效的原 OTA 启动选择。应用更新会选择并启动新应用，随后须验收身份、健康状态
 和目标行为；ROM 恢复完成后，先确认 Vibe Mode 就绪，再安装目标应用。
 
-## 技术名称
-
-`Recovery` 保留为固件、ABI 和集成契约的技术名称。
-`esp-mosaico-recovery/` 目录、`factory` 分区、`firmware_mode=recovery`、
-命令与 API 标识保持原名。ESP-Iris 工作台中的 **Recovery**、**Factory Recovery**
-或**恢复固件**在 ESP-Mosaico 上对应 Vibe Mode。
-`needs_recovery`（需恢复）描述需要处理的设备状态，不表示当前固件模式。
