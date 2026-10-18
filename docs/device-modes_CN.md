@@ -9,7 +9,7 @@
 | 模式 | 运行内容 | 使用场景 |
 | --- | --- | --- |
 | 正常应用 | 用户应用；集成并启动后可使用 ESP-Iris | 运行、调试和验收应用 |
-| Vibe Mode | Flash 的 `factory` 分区中的保留固件，包含 ESP-Iris | 安装、更新应用和维护设备 |
+| Vibe Mode | Flash 的 `vibe_mode`（`app/test`）分区中的保留固件，包含 ESP-Iris | 安装、更新应用和维护设备 |
 | ROM Download Mode（ROM 下载模式） | 芯片内置的固件下载程序，不运行 ESP-Iris | 空白设备初始化、基础固件无法工作时恢复 |
 
 Agent 可连接运行 ESP-Iris 的正常应用或 Vibe Mode。离线、握手失败不代表设备
@@ -30,7 +30,7 @@ Vibe Mode，不安装固件。应用更新命令会自动管理这一切换。
 
 - **Vibe Mode — AI 键（GPIO7）：** 已安装有效的 Mosaico bootloader 和保留固件时，
   按住 AI 键上电，待 Vibe Mode 启动后松开。bootloader 仅为本次启动选择
-  `factory`，不修改 OTA 启动选择。
+  `vibe_mode`（`app/test`），不修改 OTA 启动选择。
 - **ROM Download Mode — Boot 键（GPIO61）：** 仅当 `recover` 要求手动进入时，
   先关机，按住 USB-C 接口左侧的 Boot 键，再保持按住并开机。
   进入 ROM 下载模式后松开 Boot 键，告知 Agent 物理操作完成，由 Agent
@@ -40,3 +40,13 @@ Vibe Mode，不安装固件。应用更新命令会自动管理这一切换。
 有效的原 OTA 启动选择。应用更新会选择并启动新应用，随后须验收身份、健康状态
 和目标行为；ROM 恢复完成后，先确认 Vibe Mode 就绪，再安装目标应用。
 
+## Ideas 与固件维护
+
+Download Ideas 输入六位应用编号，保留开头的零；先查看名称、图标、描述和兼容
+版本，再确认下载到 NAND。下载与设为开机应用是两个操作。My Ideas 管理本地
+下载；About 提供需要确认的 Vibe Mode 在线固件更新。旧 Bridge 配对流程是独立
+的维护接口。详见[当前固件流程](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/esp-mosaico-vibe-mode/docs/vibe-mode-workflows.md)。
+
+0.2 产品使用 Recovery ABI 2 和保留 test 分区布局；普通应用位于 `main_app`
+（`app/ota_0`）。源码与已审查预构建包分别发布。旧设备或旧工作区使用当前工具前，
+先阅读[迁移说明](workspace-migration_CN.md)。

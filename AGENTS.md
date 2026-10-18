@@ -5,7 +5,8 @@ User guides start at [docs](docs/README.md).
 
 Use **Vibe Mode** for ESP-Mosaico’s retained firmware and **ROM Download Mode**
 for the chip’s download program. See [device modes](docs/device-modes.md).
-`Recovery` remains the technical name in paths, commands, protocol fields and ABI.
+`Recovery` remains in existing component names, commands, protocol fields and ABI.
+Retained firmware sources live in `esp-mosaico-vibe-mode/firmware/vibe-mode` in utils.
 `iris test enter-recovery` enters Vibe Mode; `recover` writes base firmware.
 AI (GPIO7) selects Vibe Mode; Boot (GPIO61) selects ROM Download Mode.
 
@@ -14,11 +15,13 @@ AI (GPIO7) selects Vibe Mode; Boot (GPIO61) selects ROM Download Mode.
 - User applications belong in `projects/`; settings in `.mosaico.json`.
   Public tooling/templates belong in `submodule/esp-mosaico-utils/mosaico-tools`;
   Vibe Mode firmware and Recovery integration/ABI belong in utils'
-  `esp-mosaico-recovery/`, fixtures in its `tests/firmware/`.
+  `esp-mosaico-vibe-mode/`, fixtures in its `tests/firmware/`.
   Never use Vibe Mode firmware as an application template or mix test fixtures into user apps.
-- Board support and complete game examples belong in `submodule/esp-mosaico-bsp/`;
-  generic game implementation/tests belong in `submodule/raylib-lite-engine/`.
-  Initialize and inspect only needed submodules, including BSP before using its examples.
+- Product board support and peripheral examples belong in `submodule/esp-mosaico-bsp/`.
+  Game runtime, complete reference games, behavior tests and native example Board
+  adapters belong in `submodule/raylib-lite-engine/`. Initialize and inspect only
+  needed submodules; native game adapters use Board Manager and have their own
+  dependencies. Their standalone layout is not the retained product contract.
 - Keep user documentation in `docs/`, indexed by `docs/README.md`; keep root
   English/Chinese READMEs aligned and short. Component API/protocol docs stay with owners.
 - Agent guidance/tools belong in `.agents/`, shared skills in version-controlled
@@ -50,7 +53,7 @@ AI (GPIO7) selects Vibe Mode; Boot (GPIO61) selects ROM Download Mode.
 
 ## Environment and builds
 
-- Use Python **3.10+**, target **esp32s31**, and ESP-IDF at exactly
+- Use Python **3.10+** and Git **2.28+** for project creation, target **esp32s31**, and ESP-IDF at exactly
   **`7b9cc1ac79f865983f59bb8ff3ff43eb74ff1dbe`**, not the latest `master`.
 - Before ESP-IDF work, verify the checkout with `git -C <idf-path> rev-parse HEAD`
   and follow [build doctor/build workflow](.agents/skills/idf-low-noise-build/SKILL.md).
@@ -70,6 +73,12 @@ AI (GPIO7) selects Vibe Mode; Boot (GPIO61) selects ROM Download Mode.
   use Git to fetch and check out the selected tag and its pinned submodule commits.
 - Create apps with `python mosaico.py project init <name>` using utils' Hello World
   template; create games with `python mosaico.py game create <name> --template ...`.
+  Workspace `.mosaico.json` uses schema 2; template descriptors retain schema 1.
+  Creation initializes an independent Git repository and shared quality configuration.
+  Keep application components under `components/app_*`; `main` composes them.
+  The blank game includes product integration. Engine example copies require
+  `game build --project ... --target iris`, followed by installation of the emitted
+  System Update bundle through the product CLI. Native builds alone do not add Iris.
 - For device UI, prefer GSP and load [mosaico-ui](.agents/skills/mosaico-ui/SKILL.md);
   for GSP also load [gsp-sim](.agents/skills/gsp-sim/SKILL.md) for its pinned Registry
   version, native C preview commands and runtime constraints.
@@ -86,11 +95,12 @@ AI (GPIO7) selects Vibe Mode; Boot (GPIO61) selects ROM Download Mode.
 Unless the developer approves another architecture, every application must:
 
 - Preserve the retained firmware's immutable partition prefix and the utils Hello World workflow.
+  The 0.2 contract uses `vibe_mode` (`app/test`), `main_app` (`app/ota_0`) and Recovery ABI 2.
   Before application integration changes, read the
   [public integration contract](submodule/esp-mosaico-utils/mosaico-tools/docs/application-integration.md).
 - Set `CONFIG_ESP_IRIS_OTA_DEFAULT_VIA_RECOVERY=y`, use utils' `esp_mosaico_app_recovery`,
   call `iris_ota_support_start()`, and keep the OTA writer only in Vibe Mode.
-  Include utils' `esp-mosaico-recovery/cmake/mosaico_idf_project.cmake` before `project()`.
+  Include utils' `esp-mosaico-vibe-mode/cmake/mosaico_idf_project.cmake` before `project()`.
 - Use `python mosaico.py iris system-update --project ...` for new apps, changed
   layouts or external resources. Use `iris app-update` only for code-only changes
   with an identical full partition table; never reshape the layout to make it pass.

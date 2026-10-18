@@ -8,7 +8,7 @@ preserve existing public API compatibility and dependency-owned code conventions
 
 1. **Organize components by responsibility and keep the entry point minimal.** `app_main()` should only handle initialization, dependency wiring, and startup sequencing. Keep component dependency directions clear; circular dependencies are prohibited.
 
-2. **Define contracts for public interfaces.** Briefly and clearly document parameter ranges, units, ownership, calling context, thread safety, timeouts, and error codes. Each component’s README must describe its responsibilities, dependencies, and minimal usage. Comments should explain design rationale and constraints.
+2. **Define contracts for public interfaces.** Keep public API comments concise; put detailed ownership, lifecycle, calling context, thread safety, timeouts and error contracts in the component README, with units and ranges beside fields. Each README must describe responsibilities, dependencies and minimal usage. Comments should explain design rationale and constraints.
 
 3. **Distinguish application components from third-party components.** Use the `app_` prefix for application components. Preserve the original names of third-party components and manage them centrally. Do not directly modify components in `managed_components/`; apply changes through patches.
 
@@ -21,6 +21,13 @@ preserve existing public API compatibility and dependency-owned code conventions
 7. **Actively use Git for code management.** Before starting, check the current branch, `git status`, and existing diffs. Use a separate branch for each independent task, such as `feat/xxx` or `fix/xxx`. For parallel tasks, use separate worktrees under `Projects` to avoid modifying the same working directory concurrently.
 
 8. **Keep commits focused and reviewable.** Each commit should serve one clear purpose. Commit functional changes, refactoring, and formatting-only changes separately.
+
+Project creation initializes an independent Git repository on `main` and supplies
+`tools/quality/` configuration. It does not stage files, create commits, configure
+remotes or install hooks. Follow the generated quality guide to enable checks;
+the shared checker belongs to utils and is referenced by relative path. Preserve
+template-owned settings and keep application-specific policy in the application.
+
 
 ## Debugging Guidelines
 
@@ -40,6 +47,6 @@ preserve existing public API compatibility and dependency-owned code conventions
 - Avoid local arrays or aggregate objects larger than 128 bytes on task stacks
   unless justified by the task's stack budget, including the call chain.
   Prefer instance-owned buffers; do not move mutable buffers to hidden globals.
-  
+
 - Prefer reusable instance buffers, memory pools or ring buffers in high-frequency
   or latency-sensitive paths. Avoid repeated heap allocation in those paths.

@@ -9,7 +9,8 @@ or `--help` on a specific command to inspect its arguments.
 ```text
 mosaico.py
 ├── doctor
-├── project init
+├── project init / sim / package / validate / upload
+├── account login / status / logout
 ├── iris
 │   ├── run / status
 │   ├── list / claim / release / reconcile
@@ -20,7 +21,7 @@ mosaico.py
 │   ├── system-update
 │   └── test enter-recovery / recovery-wifi / bridge-code
 ├── recover
-└── game create/new/sim/run/build (blank template, BSP examples and engine Host)
+└── game create/new/sim/run/build (blank template, engine examples and Host)
 ```
 
 For mode definitions and the AI/Boot button distinction, see
@@ -33,9 +34,12 @@ For mode definitions and the AI/Boot button distinction, see
 | --- | --- |
 | `doctor` | Check the host environment without starting a Gateway |
 | `project init <name>` | Create an application from the workspace template without starting a Gateway |
+| `project sim` | Run the application's native C UI backend; explicit scene/dump options render only the scene |
+| `project package/validate/upload` | Package an Ideas ZIP offline, validate it, or upload the existing ZIP as a draft |
+| `account login/status/logout` | Manage Mosaico Ideas browser login and credentials |
 | `iris run` | Retain a client on the shared Gateway; on initial creation, try to connect the sole device. Ctrl+C releases only this client |
 | `iris status [--all]` | Passively query this project's Gateway, or Gateways across workspaces for the same OS user, including clients and device ownership; neither start nor keep a Gateway alive |
-| `iris list` | Enumerate visible endpoints and known devices; discovery does not claim or connect a device |
+| `iris list` | Enumerate endpoints/devices through the selected project Gateway, starting it if needed; discovery does not claim or connect a device |
 | `iris claim/release/reconcile` | Claim or release a device, or explicitly clean up ordinary ownership confirmed to be stale |
 | `iris takeover start/status/resume/abort/reconcile` | Request takeover, query its record, resume verification, abort, or reconcile ownership |
 | `iris logs` | Show retained logs and keep following new output; `--snapshot` reads only retained logs |
@@ -48,7 +52,7 @@ For mode definitions and the AI/Boot button distinction, see
 | `iris app-update` | Update normal application code only; requires the complete partition table to match the device |
 | `iris system-update` | Recommended entry for a new application, partition layout changes or resource changes; writes according to the update bundle manifest |
 | `recover` | Provision or restore the device's base firmware, including when ESP-Iris is unreachable |
-| `game` | Create games from BSP examples and invoke engine Host simulation or builds; see [game development](game-development.md) |
+| `game` | Create blank games or engine examples and invoke Host simulation or native/Iris builds; see [game development](game-development.md) |
 
 Commands under `iris test` exercise individual Vibe Mode workflows:
 
@@ -56,7 +60,29 @@ Commands under `iris test` exercise individual Vibe Mode workflows:
 | --- | --- |
 | `enter-recovery` | A normal application responds through ESP-Iris and reboots into Vibe Mode; wait for the same Device ID to reconnect with a new Boot ID. If already in Vibe Mode, return its current status |
 | `recovery-wifi` | Requires Vibe Mode with ESP-Iris USB available; submit the Wi-Fi network name and password, then wait for connectivity |
-| `bridge-code` | Requires Vibe Mode, available USB, a configured Bridge service and network connectivity; open the device download page and return the pairing code, validity period and Bridge website URL |
+| `bridge-code` | Requires Vibe Mode, available USB, a configured Bridge service and network connectivity; exercise the legacy Bridge maintenance pairing interface and return its code, validity period and website URL; this is separate from the current six-digit Ideas lookup |
+
+## Ideas file releases
+
+Prepare `mosaico-ideas.json` using `mosaico-ideas/project-release/1` and build the
+application's `.irisfw` first. Packaging produces an immutable ZIP with website
+content, firmware and Chinese/English device presentation resources:
+
+```sh
+python mosaico.py project package --project projects/my_app --output dist/release.zip
+python mosaico.py project validate dist/release.zip --json
+python mosaico.py account login
+python mosaico.py project upload dist/release.zip --create --yes --json
+# Use the current draft version returned by the last accepted upload:
+python mosaico.py project upload dist/release.zip --update APPLICATION_ID --expected-project-version 1 --yes --json
+```
+
+Package/validate are offline. Upload takes an existing ZIP, does not rebuild it,
+and creates or replaces a draft; publishing is separate. Its receipt/idempotency
+state permits retry after a lost response. `--wait-timeout` preserves a pending
+validation receipt. Ordinary releases cannot contain Vibe Mode or bootloader
+components. See the [file release guide](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/mosaico-tools/docs/ideas-file-release/README.zh-CN.md)
+for dependencies, resources, authentication and server validation.
 
 ## Build tool compatibility and diagnostics
 
@@ -77,12 +103,12 @@ The standalone low-noise runner uses the same platform default and accepts that
 environment variable for explicit overrides. Disabling configdep retains Ninja
 incremental builds, but configuration changes may recompile more source files.
 
-Both the application template and Vibe Mode bootstrap the pinned standalone GSPC
-compiler without requiring the Python `gsp` module. An uncached first run needs
-a download; offline builds can set `GSPC_EXECUTABLE` to an absolute path to a
-compatible compiler. Applications use GSPC 0.6.1 and ESP-GSP 1.5.1;
-Vibe Mode independently retains GSPC 0.5.0 and ESP-GSP 1.4.0. An explicit compiler
-override must match the project being built.
+GSP applications bootstrap the pinned standalone GSPC compiler without requiring
+the Python `gsp` module. An uncached first run needs a download; offline builds
+can set `GSPC_EXECUTABLE` to an absolute path to a compatible compiler. Application
+versions are GSPC 0.6.1 and ESP-GSP 1.5.1. Vibe Mode uses its own lightweight UI
+and does not require GSP/GSPC. Shared tool acquisition lives in utils' `shared/gsp`;
+application pins remain in `mosaico-tools/gsp-toolchain.json`.
 
 Build error summaries include configdep `touch_file` failures and their following
 path details, falling back to `FAILED:` context when the cause is unrecognized.
@@ -129,7 +155,7 @@ table and resource images declared by the project. It preserves the fixed Vibe M
 prefix and bootloader. A reserved but unused `game_assets` partition needs no image;
 applications using external resources declare their images through CMake for inclusion
 in the bundle. Use `--bundle PATH` for an existing bundle. See the
-[Vibe Mode guide](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/esp-mosaico-recovery/firmware/recovery/README.md)
+[Vibe Mode guide](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/esp-mosaico-vibe-mode/firmware/vibe-mode/README.md)
 for updates to Vibe Mode itself, HTTP(S)/NAND updates and base bundle constraints.
 
 If the partition tables differ, `app-update` returns `partition_layout_mismatch`,

@@ -34,7 +34,9 @@ To enter existing Vibe Mode from a reachable application, use
    python mosaico.py iris list --details --json
    ```
 
-   These are passive queries. A discovery-only request can end here, labeling cached
+   `status` is passive. `list` may start/reuse the selected project Gateway but
+   does not claim/connect a device; create an application first in an empty workspace.
+   A discovery-only request can end here, labeling cached
    or unverified records as such. Live device claims require the next step.
 4. If another project owns the device, follow [handoff rules](../../../docs/project-gateway_CN.md#跨项目协调).
    Do not kill its Gateway or clear ownership to obtain access. Interruption with

@@ -2,7 +2,7 @@
 
 [简体中文](project-init_CN.md) | [Documentation index](README.md)
 
-A fresh workspace has no pre-created applications. Use Python 3.10+ and initialize
+A fresh workspace has no pre-created applications. Use Python 3.10+, Git 2.28+ and initialize
 only utils to create one:
 
 ```sh
@@ -17,10 +17,33 @@ BSP, engine, ESP-IDF or device, and does not start a Gateway. On failure, it rem
 files written by that creation attempt. It refuses to overwrite an existing target
 and does not automatically change the default project.
 
-In `.mosaico.json`, `workspace.init_template` can point to a custom descriptor.
+The workspace `.mosaico.json` uses `schema_version: 2`; template descriptors
+retain schema 1. See [migration](workspace-migration.md) for existing workspaces.
+`workspace.init_template` can point to a custom descriptor.
 `workspace.projects_dir` can change the output location, which must remain within
 the workspace. See [application integration](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/mosaico-tools/docs/application-integration.md)
 for the template format and path variables.
+
+Creation initializes an independent Git repository on `main`, supplements missing
+Git/editor/quality configuration, and preserves template-owned settings. It does
+not stage files, commit, configure a remote or install hooks. From the new project,
+follow `tools/quality/README.md` to install and enable the pinned checks. The shared
+checker stays in utils; the project contains its policy and relative references.
+
+The Hello World layout separates responsibilities:
+
+| Path | Purpose |
+| --- | --- |
+| `main/main.c` | Device startup and dependency composition |
+| `components/app_hello/` | Portable C UI controller and public API |
+| `components/app_hello/ui/` | Authored scene and fonts |
+| `components/app_hello/host/` | Native desktop adapter using the same controller |
+| `components/app_display/` | BSP display and touch policy |
+
+`project sim` discovers the component's scene and Host backend. Older root
+`ui/main.json` and `pc/` layouts remain supported. With multiple scenes use
+`--scene PATH`, but this selects scene-only rendering without C callbacks;
+omit it when validating application behavior.
 
 Project selection follows this order: explicit `--project`, the current project,
 a valid user-configured default project, then the sole created project. With no
@@ -48,7 +71,10 @@ only for issues that depend on real hardware or behavior the simulator does not
 cover, and state the remaining validation gaps.
 
 After simulator validation, install through the product CLI and verify the physical
-display, input and hardware interactions:
+display, input and hardware interactions. The current Hello World template provides
+Iris screenshots but does not register the optional pointer RPC; verify touch on
+the physical screen. Generic RPC/input capabilities do not establish that a pointer
+handler exists:
 
 ```sh
 python mosaico.py recover
@@ -61,6 +87,6 @@ Use `system-update` for a new application, layout changes or external resource
 changes. Use `app-update` only for code changes with an identical full partition
 table and unchanged resources.
 
-Generated source files do not contain absolute paths from the development machine.
+The generated Hello World sources do not contain absolute development-machine paths.
 After moving or cloning the entire workspace, initialize the pinned dependencies
 and rebuild. Old build caches are not portable artifacts.

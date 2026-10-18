@@ -54,7 +54,8 @@ JSON 的 `running` 描述会话进程锁是否仍被持有，`reachable` 描述 
 
 ## 设备发现与选择
 
-`iris list` 被动枚举候选端点和已知设备，不认领设备。发现记录可能包含缓存中的
+`iris list` 枚举候选端点和已知设备，不认领设备，但可能启动或复用所选项目 Gateway。
+空工作区先创建应用；`iris status --all` 仍为被动主机查询。发现记录可能包含缓存中的
 离线设备；实际 Device ID、Boot ID 和在线状态须在操作时通过握手确认。
 
 ```sh
@@ -92,9 +93,29 @@ Gateway 上已连接的设备，不从当前电脑自动认领 USB。
 从旧版随机 Device ID 升级为 eFuse Base MAC 派生身份时，用 `iris list` 刷新
 保存的选择器。旧 ID 的操作历史仍保留，normal 与 Vibe Mode 应使用兼容的身份规则。
 
+## 项目历史与证据
+
+所选应用的 `.gateway/` 保存 `state/gateway.sqlite3`、`state/events/` 分段历史、
+`state/artifacts/` 制品和 `gateway.log`，与 `build/` 独立并带有 Git 忽略文件。
+凭据、身份/TLS 密钥、启动锁和跨项目归属仍留在主机，复制项目不会复制活动连接或认证。
+只读或网络挂载工程可使用 `iris run --project ... --gateway-data-dir /local/disk/project-gateway`；
+该覆盖在本机按项目记忆，改变位置前先结束所属 Gateway。
+
+已有 0.2 历史须显式迁移。升级前完成活动操作、结束所属 Gateway，独立备份完整状态
+（包括 WAL/SHM、日志、制品和事件分段）及凭据。打开 schema 200/201 数据库会升级到
+202，仅回退代码不能降级；回滚须恢复独立的升级前备份。旧源目录可能继续作为活动
+凭据库，不能把它当回滚备份，也不能在仍使用时删除。具体步骤见[存储迁移指南](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/ESP-Iris/components/esp_iris/tools/README.md#runtime-and-storage-model)。
+
+历史按容量和时间分段保留，默认事件上限为 7 天、200,000 行、512 MiB，持久化操作
+证据独立保存。慢订阅者、队列压力或存储故障可能产生显式历史缺口；应检查健康与丢失
+指标，不能假设保留日志完整。大型证据导出通过有限额的后台任务执行，工作台显示进度、
+支持取消，并在完成后下载 ZIP。协议详见[留存与存储故障](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/ESP-Iris/components/esp_iris/tools/README.md#diagnostic-retention-and-storage-failures)
+及[后台导出](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/ESP-Iris/components/esp_iris/tools/README.md#background-evidence-exports)。
+Agent 获取设备证据仍使用 CLI 状态、日志、操作记录和保存的截图。
+
 ## 跨项目协调
 
-公共注册表位于同用户状态目录下的 `esp-mosaico/ownership/ownership.sqlite3`。
+公共注册表位于同用户状态目录下的 `esp-mosaico/0.2/ownership/ownership.sqlite3`。
 Linux 使用 `XDG_STATE_HOME`，未设置时使用用户的 `.local/state`；macOS 使用
 Application Support；Windows 使用 LOCALAPPDATA。不同用户、不同主机或隔离
 状态目录不共享此协调视图。独立或远程 Gateway 也不自动参与。
@@ -148,17 +169,17 @@ Gateway 重启不会自动重放设备写操作。
 
 ## 旧实例与外部 Gateway
 
-旧的临时／常驻实例仍可查询，无法提供客户端明细时会明确显示。新的设备命令要求
-兼容的 API 和共享生命周期能力；不兼容时通过旧实例原来的持有终端结束它，
-工具不会自动结束其他人的会话。
-
-公共注册表保留旧表布局，以附加表记录新元数据，允许其他工作区旧工具继续访问。
-`--gateway-profile` 的生命周期仍由外部负责；连接失败不会回退到本地实例。
+0.2 工具使用 Gateway API 2，并把主机状态隔离到 `esp-mosaico/0.2`。
+它不会导入 0.1 记录或接管仍存活的旧 Gateway。迁移前用原环境和原持有终端
+完成操作并释放设备，见[工作区迁移](workspace-migration_CN.md)。
+`--gateway-profile` 的生命周期由外部负责，连接失败不会回退到本地实例。
 
 ## 组件边界与版本策略
 
 主机产品工具位于 `submodule/esp-mosaico-utils/mosaico-tools`；Vibe Mode 固件、
-已审查镜像与共享持久化 ABI 位于 `esp-mosaico-recovery`。旧工具入口保留转发兼容。
+已审查镜像与共享持久化 ABI 位于 `esp-mosaico-vibe-mode`，固件工程为
+`firmware/vibe-mode`。旧转发 launcher、Python 包和构建脚本入口已移除，迁移后
+更新源码路径并使用新的构建缓存。
 CLI 通过 ESP-Iris 公开主机接口查询本机状态，不读取其 SQLite 表或私有锁结构。
 
 默认按 Gateway API 和命令所需能力复用实例，不要求整个工具仓库的 Git 提交一致。

@@ -10,7 +10,7 @@ it does not put the chip in ROM Download Mode.
 | Mode | What runs | When to use it |
 | --- | --- | --- |
 | Normal application | Your application; ESP-Iris is available when integrated and started | Run, debug and verify your application |
-| Vibe Mode | Retained firmware in the Flash `factory` partition, including ESP-Iris | Install/update applications and maintain the device |
+| Vibe Mode | Retained firmware in the Flash `vibe_mode` partition (`app/test`), including ESP-Iris | Install/update applications and maintain the device |
 | ROM Download Mode | The chip's built-in firmware download program, without ESP-Iris | Provision a blank device or restore unusable base firmware |
 
 Agents can connect to either a normal application with ESP-Iris or Vibe Mode.
@@ -34,7 +34,7 @@ commands are in the [CLI reference](mosaico-cli.md#command-responsibilities).
 
 - **Vibe Mode — AI button (GPIO7):** with a working Mosaico bootloader and retained
   firmware, hold AI while powering on, then release after Vibe Mode starts.
-  The bootloader selects `factory` for this boot without changing OTA selection.
+  The bootloader selects `vibe_mode` (`app/test`) for this boot without changing OTA selection.
 - **ROM Download Mode — Boot button (GPIO61):** only when `recover` requests
   manual entry, power off, hold Boot (to the left of the USB-C port), and power
   on while holding it. Release Boot after ROM Download Mode entry and tell the
@@ -46,3 +46,17 @@ restarting with AI released follows the existing OTA selection, if it is valid.
 Application updates select and boot the installed app; verify its identity,
 health and intended behavior. After ROM restoration, verify Vibe Mode readiness
 before installing the intended application.
+
+## Ideas and firmware maintenance
+
+Download Ideas accepts a six-digit application number, preserving leading zeros.
+View the app's name, icon, description and compatible release, then confirm the
+download to NAND. Downloading and selecting the boot application are separate
+operations. My Ideas manages local downloads; About provides a confirmed online
+Vibe Mode firmware update. The legacy Bridge pairing workflow is a separate
+maintenance interface. See the [current firmware workflows](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/esp-mosaico-vibe-mode/docs/vibe-mode-workflows.md).
+
+The 0.2 product uses Recovery ABI 2 and the retained test-partition layout;
+normal firmware runs in `main_app` (`app/ota_0`). Source updates and reviewed
+prebuilt bundles are released separately. See [migration](workspace-migration.md)
+before using an older device or workspace with these tools.
