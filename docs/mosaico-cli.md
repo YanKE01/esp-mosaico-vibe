@@ -17,6 +17,7 @@ mosaico.py
 │   ├── takeover start / status / resume / abort / reconcile
 │   ├── logs / memory / crash / rpc
 │   ├── device-status / screenshot / operation-status
+│   ├── operation-reconcile
 │   ├── app-update
 │   ├── system-update
 │   └── test enter-recovery / recovery-wifi / bridge-code
@@ -49,6 +50,7 @@ For mode definitions and the AI/Boot button distinction, see
 | `iris device-status` | Read live device identity, Boot ID and firmware state; reject stale or mismatched responses |
 | `iris screenshot <output>` | Save the device image directly and return image/operation metadata; verify the same Device ID and Boot ID before and after capture |
 | `iris operation-status <operation-id>` | Query an existing operation, preserving its actual status; does not acquire a device or replay the operation |
+| `iris operation-reconcile <operation-id>` | Continue verification; ROM recovery reconnects to its recorded identity without rewriting or resetting |
 | `iris app-update` | Update normal application code only; requires the complete partition table to match the device |
 | `iris system-update` | Recommended entry for a new application, partition layout changes or resource changes; writes according to the update bundle manifest |
 | `recover` | Provision or restore the device's base firmware, including when ESP-Iris is unreachable |
@@ -161,6 +163,7 @@ for updates to Vibe Mode itself, HTTP(S)/NAND updates and base bundle constraint
 If the partition tables differ, `app-update` returns `partition_layout_mismatch`,
 the device and build SHA-256 hashes, and a `system-update` recommendation. It does
 not automatically expand the write scope or modify the project's partition table.
+Reassess the update method; never reshape the intended partition layout to bypass this check.
 The effective build configuration, including with `--skip-build`, and the updated
 application must pass role, product, board, layout contract and Recovery ABI checks.
 
@@ -189,6 +192,18 @@ capture fails verification; any saved image is not proof of the current boot.
 Operation queries can start/reuse the project's Gateway to read its retained
 records, without connecting to a device. `ok: true` means the query succeeded;
 read `operation.status` for the actual outcome, including `failed` or `outcome_unknown`.
+
+When a ROM write completed but Vibe Mode acceptance timed out, continue with
+`python mosaico.py iris operation-reconcile <operation-id> --project projects/my_app --json`.
+This uses the original target and recorded write result, reconnects through the
+Gateway's ownership checks, and verifies Vibe Mode identity, boot, firmware and OTA
+readiness. It never repeats the write or reset. The original status is retained;
+the new `reconciliation.outcome` reports `observed_success` only with sufficient
+evidence. Missing evidence or an active writer cannot be treated as success.
+If a Gateway crash left orphaned ownership, wait for the writer to finish, then
+use `iris reconcile --device-id <Device-ID> --project projects/my_app` to clear
+that confirmed stale claim before retrying `operation-reconcile`.
+
 Use browser automation and CLI/Web comparison for workbench testing or an explicit
 user request. See the [Gateway guide](project-gateway.md) for lifecycle, device
 ownership and takeover rules.
@@ -197,13 +212,13 @@ After connection checks, use `recover` when neither the normal application nor
 Vibe Mode is reachable. If manual ROM entry is required, the developer follows
 the [physical entry steps](device-modes.md#physical-entry); the agent verifies
 the ROM connection, resumes `recover`, and checks the device and target application. Never erase the whole flash merely to restore
-connectivity, or overwrite credentials, identity or Vibe Mode data without authorization.
+connectivity, or overwrite credentials, identity, Vibe Mode data or partitions without authorization.
 
 Avoid USB Serial/JTAG for application flashing and monitoring. Do not open the
-interface concurrently while the Gateway owns it. High-Speed USB belongs to ESP-Iris
-by default. A normal application whose product function requires that interface
-must document the exception and preserve ESP-Iris device operations and recovery
-through another available transport.
+interface concurrently while the Gateway owns it. Vibe Mode always assigns High-Speed
+USB to ESP-Iris; normal applications do so by default. A normal application whose
+product function requires that interface must document the exception and preserve
+ESP-Iris device operations and recovery through another available transport.
 
 ## Legacy command compatibility
 

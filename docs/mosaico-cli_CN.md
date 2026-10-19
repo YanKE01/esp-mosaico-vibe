@@ -17,6 +17,7 @@ mosaico.py
 │   ├── takeover start / status / resume / abort / reconcile
 │   ├── logs / memory / crash / rpc
 │   ├── device-status / screenshot / operation-status
+│   ├── operation-reconcile
 │   ├── app-update
 │   ├── system-update
 │   └── test enter-recovery / recovery-wifi / bridge-code
@@ -48,6 +49,7 @@ mosaico.py
 | `iris device-status` | 读取实时设备身份、Boot ID 和固件状态；拒绝缓存或身份不匹配的响应 |
 | `iris screenshot <output>` | 直接保存设备图像并返回图像及操作信息；核对截图前后 Device ID 和 Boot ID 一致 |
 | `iris operation-status <operation-id>` | 查询已有操作并保留其实际状态；不认领设备、不重放操作 |
+| `iris operation-reconcile <operation-id>` | 继续验证；ROM 恢复按原记录中的身份重连，不重复写入或复位 |
 | `iris app-update` | 仅更新正常应用代码，要求完整分区表与设备一致 |
 | `iris system-update` | 新应用、分区布局或资源变化的推荐入口，按更新包清单写入 |
 | `recover` | 初始化或恢复设备基础固件，包括 ESP-Iris 不可达时的恢复 |
@@ -150,6 +152,7 @@ Vibe Mode 自身更新、HTTP(S)/NAND 更新及基础包约束见
 
 `app-update` 遇到分区表不同会返回 `partition_layout_mismatch`、设备/构建
 SHA-256 及 `system-update` 建议，不会自动扩大写入范围或修改工程分区表。
+应重新选择更新方式，不得为绕过检查而修改预期分区布局。
 实际构建配置（包括 `--skip-build`）与更新后的应用都须通过角色、产品、板型、
 布局契约和 Recovery ABI 检查。
 
@@ -173,17 +176,28 @@ python mosaico.py iris operation-status <operation-id> --project projects/my_app
 和 Gateway artifact 信息。截图过程中发生重启会导致验证失败；已保存的图像不能证明当前启动状态。
 操作查询可启动或复用项目 Gateway 来读取保留记录，不连接设备。
 `ok: true` 仅表示查询成功；实际结果读取 `operation.status`，包括 `failed` 或 `outcome_unknown`。
+
+ROM 写入完成但 Vibe Mode 验收超时时，执行
+`python mosaico.py iris operation-reconcile <operation-id> --project projects/my_app --json`。
+该命令使用原目标身份和已保存的写入结果，经 Gateway 归属检查后重新连接，验证
+Vibe Mode 身份、启动实例、固件和 OTA 就绪状态，不重复写入或复位。原操作状态保留，
+新增的 `reconciliation.outcome` 仅在证据充分时返回 `observed_success`；证据缺失或
+写入进程仍在运行时不会报告验收成功。
+如果 Gateway 崩溃留下孤立归属，先等待写入进程结束，再通过
+`iris reconcile --device-id <Device-ID> --project projects/my_app`
+清理已确认失效的归属，然后重试 `operation-reconcile`。
+
 浏览器自动化和 CLI/Web 对照用于工作台自身测试或用户明确要求的场景。
 生命周期、设备占用与接管的完整规则见 [Gateway 指南](project-gateway_CN.md)。
 
 排查连接后 normal 与 Vibe Mode 仍均不可达时，使用 `recover`。仅当命令要求
 手动进入 ROM 时，由开发者按[物理入口步骤](device-modes_CN.md#物理入口)执行；
 随后由 Agent 核实 ROM 连接、继续 `recover` 并验证设备和目标应用。
-不得仅为恢复连接擦除整片 Flash，或未经授权覆盖凭据、身份及 Vibe Mode 数据。
+不得仅为恢复连接擦除整片 Flash，或未经授权覆盖凭据、身份、Vibe Mode 数据或分区。
 
 应用烧录和监控避免 USB Serial/JTAG；Gateway 拥有接口时不得并发打开它。
-High-Speed USB 默认交给 ESP-Iris；产品功能需要占用它的 normal 应用应记录例外，
-并通过其他可用传输保留 ESP-Iris 运维和恢复路径。
+Vibe Mode 始终将 High-Speed USB 交给 ESP-Iris，normal 应用默认也如此。
+产品功能需要占用它的 normal 应用应记录例外，并通过其他可用传输保留 ESP-Iris 运维和恢复路径。
 
 ## 旧命令兼容
 

@@ -2,8 +2,9 @@
 
 [简体中文](project-init_CN.md) | [Documentation index](README.md)
 
-A fresh workspace has no pre-created applications. Use Python 3.10+, Git 2.28+ and initialize
-only utils to create one:
+A fresh workspace has no pre-created applications. This workspace requires Python 3.10+
+and Git 2.28+, even if individual public tools support older versions. Initialize only
+utils to create an application:
 
 ```sh
 git submodule update --init submodule/esp-mosaico-utils

@@ -10,7 +10,7 @@ preserve existing public API compatibility and dependency-owned code conventions
 
 2. **Define contracts for public interfaces.** Keep public API comments concise; put detailed ownership, lifecycle, calling context, thread safety, timeouts and error contracts in the component README, with units and ranges beside fields. Each README must describe responsibilities, dependencies and minimal usage. Comments should explain design rationale and constraints.
 
-3. **Distinguish application components from third-party components.** Use the `app_` prefix for application components. Preserve the original names of third-party components and manage them centrally. Do not directly modify components in `managed_components/`; apply changes through patches.
+3. **Distinguish application components from third-party components.** Keep application components under `components/app_*`; `main` composes them. Preserve the original names of third-party components and manage them centrally. Do not directly modify components in `managed_components/`; apply changes through patches.
 
 4. **Separate public interfaces from internal implementations.** Place public headers in `include/` and expose internal headers only through private include paths. Components must not include other components’ private headers or access their internal structures.
 

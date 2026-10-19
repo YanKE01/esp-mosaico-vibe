@@ -2,7 +2,8 @@
 
 [English](project-init.md) | [返回索引](README_CN.md)
 
-全新工作区没有预置应用。使用 Python 3.10+、Git 2.28+，只初始化 utils 即可创建：
+全新工作区没有预置应用。本工作区要求 Python 3.10+、Git 2.28+，即使个别公共工具
+支持更低版本也须遵守。只初始化 utils 即可创建应用：
 
 ```sh
 git submodule update --init submodule/esp-mosaico-utils
