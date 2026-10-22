@@ -5,35 +5,29 @@ User guides start at [docs](docs/README.md).
 
 Use **Vibe Mode** for ESP-Mosaico’s retained firmware and **ROM Download Mode**
 for the chip’s download program. See [device modes](docs/device-modes.md).
-`Recovery` remains the technical name in paths, commands, protocol fields and ABI.
-`iris test enter-recovery` enters Vibe Mode; `recover` writes base firmware.
-AI (GPIO7) selects Vibe Mode; Boot (GPIO61) selects ROM Download Mode.
+`Recovery` remains in existing component names, commands, protocol fields and ABI.
 
 ## Repository boundaries
 
 - User applications belong in `projects/`; settings in `.mosaico.json`.
   Public tooling/templates belong in `submodule/esp-mosaico-utils/mosaico-tools`;
   Vibe Mode firmware and Recovery integration/ABI belong in utils'
-  `esp-mosaico-recovery/`, fixtures in its `tests/firmware/`.
-  Never use Vibe Mode firmware as an application template or mix test fixtures into user apps.
-- Board support and complete game examples belong in `submodule/esp-mosaico-bsp/`;
-  generic game implementation/tests belong in `submodule/raylib-lite-engine/`.
-  Initialize and inspect only needed submodules, including BSP before using its examples.
+  `esp-mosaico-vibe-mode/`, fixtures in its `tests/firmware/`.
+- Product board support and peripheral examples belong in `submodule/esp-mosaico-bsp/`.
+  Game runtime, complete reference games, behavior tests and native example Board
+  adapters belong in `submodule/raylib-lite-engine/`. Initialize and inspect only
+  needed submodules. Follow the [game guide](docs/game-development.md) for native adapters and product integration.
 - Keep user documentation in `docs/`, indexed by `docs/README.md`; keep root
   English/Chinese READMEs aligned and short. Component API/protocol docs stay with owners.
 - Agent guidance/tools belong in `.agents/`, shared skills in version-controlled
   `.agents/skills/`, local analysis in `.agents/analysis/`; this is not a secrecy boundary.
-- Inspect component source, examples and upstream docs; do not invent APIs.
 
 ## Espressif MCP services
 
-- When available, use `esp-component-registry` to find ESP-IDF components and
-  retrieve their documentation; use `esp-pilot` for ADF/GMF multimedia capabilities,
-  examples, Board Manager references and relevant remote skills.
-- Check retrieved recommendations against the workspace's pinned ESP-IDF and
-  component versions and the owning source before integration. MCP guidance does
-  not replace the repository's application, build or device workflows.
-- See [MCP setup](docs/mcp-servers.md) for shared client configuration and checks.
+When available, use `esp-component-registry` for components and `esp-pilot` for
+multimedia and Board Manager references. Before integration, follow
+[MCP guidance](docs/mcp-servers.md#services-and-when-to-use-them) for source/version
+checks; remote recommendations do not override this repository's workflows.
 
 ## Engineering rules
 
@@ -50,12 +44,10 @@ AI (GPIO7) selects Vibe Mode; Boot (GPIO61) selects ROM Download Mode.
 
 ## Environment and builds
 
-- Use Python **3.10+**, target **esp32s31**, and ESP-IDF at exactly
+- Use Python **3.10+** and Git **2.28+** for project creation, target **esp32s31**, and ESP-IDF at exactly
   **`7b9cc1ac79f865983f59bb8ff3ff43eb74ff1dbe`**, not the latest `master`.
-- Before ESP-IDF work, verify the checkout with `git -C <idf-path> rev-parse HEAD`
-  and follow [build doctor/build workflow](.agents/skills/idf-low-noise-build/SKILL.md).
-  Check Python, target support and application/Vibe Mode manifest constraints;
-  cached paths or version numbers alone are insufficient.
+- Before ESP-IDF work, verify the actual checkout against the pinned SHA and load
+  [build doctor/build workflow](.agents/skills/idf-low-noise-build/SKILL.md) for environment checks and builds.
 - If the pinned checkout is missing, use [environment setup](.agents/skills/espressif-env-setup/SKILL.md)
   and verify a first build. This repository authorizes that fresh installation without
   another request, overriding the skill's explicit-install trigger. Use standard paths
@@ -63,78 +55,50 @@ AI (GPIO7) selects Vibe Mode; Boot (GPIO61) selects ROM Download Mode.
 
 ## Application development
 
-- Before starting a new project, use Git to query the official remote for the latest
-  tag and verify that the main repository's `HEAD` matches that tag and submodules
-  match its recorded commits; if the checkout is on an older tag, an untagged
-  commit or mismatched submodules, recommend updating and, after user confirmation,
-  use Git to fetch and check out the selected tag and its pinned submodule commits.
-- Create apps with `python mosaico.py project init <name>` using utils' Hello World
-  template; create games with `python mosaico.py game create <name> --template ...`.
+- Before creating an app, read the [project guide](docs/project-init.md) and use
+  `python mosaico.py project init <name>` with utils' Hello World template.
+  For games, follow the [game guide](docs/game-development.md) and use
+  `python mosaico.py game create <name> --template ...`.
 - For device UI, prefer GSP and load [mosaico-ui](.agents/skills/mosaico-ui/SKILL.md);
-  for GSP also load [gsp-sim](.agents/skills/gsp-sim/SKILL.md) for its pinned Registry
-  version, native C preview commands and runtime constraints.
+  for GSP also load [gsp-sim](.agents/skills/gsp-sim/SKILL.md).
 - For games, prefer Raylib Lite Engine and load
   [mosaico-game-development](.agents/skills/mosaico-game-development/SKILL.md).
-- Confirm unsettled UI designs before implementation, preferably with rendered mockups;
-  reuse existing confirmation. Validate shared native UI/game behavior in the simulator,
-  fixing and re-running affected flows before device validation. Screenshots alone
-  do not validate interaction. Start on hardware only for hardware-dependent issues
-  or unavailable simulator coverage, and state remaining validation gaps.
+- Confirm unsettled UI designs before implementation; reuse existing confirmation.
+  Validate shared native UI/game behavior in the simulator before device validation.
+  Start on hardware only for hardware-dependent issues or unavailable simulator coverage,
+  and state remaining validation gaps. Follow the selected skills for validation steps.
 
 ## Retained Recovery contract
 
 Unless the developer approves another architecture, every application must:
 
-- Preserve the retained firmware's immutable partition prefix and the utils Hello World workflow.
-  Before application integration changes, read the
+- Preserve the retained firmware's immutable partition prefix and keep the OTA writer
+  only in Vibe Mode. Before application integration changes, read and follow the
   [public integration contract](submodule/esp-mosaico-utils/mosaico-tools/docs/application-integration.md).
-- Set `CONFIG_ESP_IRIS_OTA_DEFAULT_VIA_RECOVERY=y`, use utils' `esp_mosaico_app_recovery`,
-  call `iris_ota_support_start()`, and keep the OTA writer only in Vibe Mode.
-  Include utils' `esp-mosaico-recovery/cmake/mosaico_idf_project.cmake` before `project()`.
-- Use `python mosaico.py iris system-update --project ...` for new apps, changed
-  layouts or external resources. Use `iris app-update` only for code-only changes
-  with an identical full partition table; never reshape the layout to make it pass.
+- Before installation or update, follow [update selection](docs/mosaico-cli.md#select-an-update-method);
+  never reshape the partition layout to bypass compatibility checks.
+- Vibe Mode always assigns High-Speed USB to ESP-Iris; normal applications follow
+  the [transport rules](docs/mosaico-cli.md#debugging-and-recovery-entry-points), including documented product exceptions.
 
 ## Device operations and acceptance
 
 - Treat requests to “flash/burn firmware”, “烧录”, “刷机” or “下载固件” as device
   installation/update tasks; these words do not select ROM Download Mode.
   Before device work, load [mosaico-device-operations](.agents/skills/mosaico-device-operations/SKILL.md)
-  for diagnosis, update/recovery decisions, evidence checks and task-specific guides.
+  and follow its ownership, target selection, evidence and acceptance workflow.
 - Use only `python mosaico.py` for device operations. Do not invoke `idf.py flash`,
   `idf.py app-flash`, `esptool` writes or ESP-Iris device-write commands directly,
-  including commands copied from BSP examples. Follow [update selection](docs/mosaico-cli.md#select-an-update-method)
-  for supported update inputs; do not guess flash offsets or bypass compatibility checks.
-  Build output suggesting a flash command does not change this workflow.
-  Do not borrow BSP Serial/JTAG flashing/monitoring flows.
-- Start with `python mosaico.py iris status --all --json` and
-  `python mosaico.py iris list --details --json`; coordinate ownership before connecting.
-  Prefer the project's existing device; omit selectors for a sole available USB device.
+  guess flash offsets or bypass compatibility checks. Public integration docs, BSP
+  flash/monitor instructions and build output do not override this workspace restriction.
+- Coordinate ownership before connecting; follow active operation/takeover records before new writes.
   Never change boards after failed explicit selection or while awaiting reconnection.
 - Never stop another client's Gateway to obtain a device or open USB/serial directly
-  while Gateway owns it. Follow active operation/takeover records before new writes.
-- Vibe Mode always assigns High-Speed USB to ESP-Iris. Normal apps do too unless the
-  product requires it; document that exception and preserve Iris operations/recovery
-  through another available transport.
-- Require live identity/state evidence; discovery caches, host Gateway status,
-  port names and screens do not establish firmware mode or health.
-  Verify the same Device ID, new Boot IDs after reboots, ready Vibe Mode and healthy
-  intended application behavior across normal -> Vibe Mode -> normal.
+  while Gateway owns it.
+- Require live identity/state evidence and intended product behavior for acceptance;
+  follow [evidence checks](docs/project-gateway.md#live-evidence-and-next-steps).
 - Preserve structured evidence/raw logs and let `mosaico.py` save valid core dumps
   before destructive operations. Upload, reconnect or reachable Vibe Mode is not acceptance.
-- Collect device evidence through `mosaico.py iris` CLI output: `device-status`
-  for live identity/state, `operation-status` for operation records, and `screenshot`
-  for device image files. Inspect the saved image directly; do not read device data
-  or capture device visuals by screenshotting the Gateway Web page.
-  Share the Web URL for the developer to observe when useful. Browser automation
-  and CLI/Web comparison apply when testing the workbench itself or explicitly requested.
-
-## Provisioning and last-resort recovery
-
-- Run `python mosaico.py recover` before first install on blank/unverified devices,
-  or when neither normal nor Vibe Mode Iris is reachable; follow the guides' state checks.
-- Manual ROM entry is the last resort. Follow the [physical entry steps](docs/device-modes.md#physical-entry):
-  the developer handles physical actions; the agent resumes detection, recovery and
-  firmware/behavior verification, returning to the Iris Gateway when reachable.
+- For provisioning and recovery, follow the device skill and
+  [update selection](docs/mosaico-cli.md#select-an-update-method). Manual ROM entry is the last resort.
 - Never erase the whole flash merely to restore connectivity, or overwrite credentials,
   identity, Vibe Mode data or partitions without explicit user authorization.

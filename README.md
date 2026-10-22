@@ -4,11 +4,11 @@
 
 A get-started workspace for developing ESP-Mosaico applications with an AI coding
 agent. The repository supplies the CLI entry, workspace settings, pinned
-submodules, documentation and Agent guidance. Applications are created on demand;
+submodules, documentation and Agent guidance. Applications are created on demand.
 
 ## Create an application
 
-This workspace requires **Python 3.10+**. Firmware builds use ESP-IDF `master`
+This workspace requires **Python 3.10+** and **Git 2.28+**. Firmware builds use ESP-IDF `master`
 at **`7b9cc1ac79f865983f59bb8ff3ff43eb74ff1dbe`** for `esp32s31`.
 Creation does not require ESP-IDF, a board, BSP or the game engine.
 Use `python3` in the commands below if your system has no `python` command.
@@ -19,7 +19,8 @@ python mosaico.py project init my_app
 ```
 
 This creates `projects/my_app` from the utils-owned Hello World template without
-changing the default project. `--dry-run` writes nothing; existing targets are
+changing the default project. Each app gets an independent Git repository and
+quality-check configuration. `--dry-run` writes nothing; existing targets are
 never overwritten. See [project creation](docs/project-init.md).
 
 Use **Vibe Mode** for device installation and maintenance, and **ROM Download Mode**
@@ -50,12 +51,12 @@ and resources. Device operations always go through the product CLI.
 | --- | --- |
 | This workspace | Entry, configuration, Agent workflows, consumer integration checks |
 | [utils](https://github.com/esp-mosaico/esp-mosaico-utils) | CLI, Vibe Mode firmware, shared application components and Hello World template |
-| [BSP](https://github.com/esp-mosaico/esp-mosaico-bsp) | Board support and complete examples, including games |
-| [Raylib Lite Engine](https://github.com/espressif2022/raylib-lite-engine) | Game runtime, renderer, assets and Host simulator |
+| [BSP](https://github.com/esp-mosaico/esp-mosaico-bsp) | Product board support and peripheral examples |
+| [Raylib Lite Engine](https://github.com/espressif2022/raylib-lite-engine) | Game runtime, complete reference games, Board adapters and Host simulator |
 
-Prefer Raylib Lite Engine for games, create from BSP `examples/`, and validate
+Prefer Raylib Lite Engine for games, create a blank game or an engine example, and validate
 visuals and gameplay in its simulator first; see the [game entry](docs/game-development.md).
-Initialize the engine only when developing games. Generated applications use
+Initialize the engine only when developing games. Hello World and blank games use
 relative references: move or clone the whole workspace, initialize its pinned
 dependencies and rebuild. Single-application export and old workspace path
 compatibility are outside this layout. See [migration notes](docs/workspace-migration.md).

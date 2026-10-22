@@ -14,20 +14,24 @@ python3 <workspace>/submodule/esp-mosaico-utils/mosaico-tools/skills/idf-low-noi
 
 ## Prepare the build
 
-1. Read the repository's `AGENTS.md` and follow its environment rules.
-2. Run `doctor` before the first build in a workspace. Verify that the reported ESP-IDF version
-   satisfies the project's declared `dependencies.idf` constraint and supports the configured
-   target. Do not replace an unsupported target with a similar chip.
+Read the repository's `AGENTS.md` for the required SDK revision and environment policy.
+Resolve the ESP-IDF installation in this order: explicit `--idf-path`, `IDF_PATH`, active
+`idf.py`, then `build/project_description.json`. If resolution is missing or conflicting,
+record the unresolved environment as a build prerequisite; do not guess a release or install path.
+Before ESP-IDF work, verify the resolved checkout against the repository's pinned SHA:
+
+```bash
+git -C <idf-path> rev-parse HEAD
+```
+
+Cached paths, `build/project_description.json` and version strings alone are not sufficient.
+Run `doctor` before the first build in a workspace. Check Python compatibility, support for
+the configured target and the declared `dependencies.idf` constraints of the application
+and Vibe Mode when included in the build. Do not replace an unsupported target with a similar chip.
 
 ```bash
 python3 <runner> --project <project-dir> doctor
 ```
-
-Resolve the ESP-IDF installation in this order: explicit `--idf-path`, `IDF_PATH`, active
-`idf.py`, then `build/project_description.json`. If resolution is missing or conflicting,
-record the unresolved environment as a build prerequisite; do not guess a release or install path.
-Treat `build/project_description.json` as a generated, potentially stale hint and verify the
-resolved checkout before use.
 
 ## Build with bounded output
 

@@ -70,8 +70,9 @@ sessions do not prove the device's current identity.
 
 ## Device discovery and selection
 
-`iris list` passively enumerates candidate endpoints and known devices without
-claiming them. Discovery records may contain cached, offline devices. The actual
+`iris list` enumerates candidate endpoints and known devices without claiming
+them. It can start or reuse the selected project's Gateway; in an empty workspace,
+create an application first. `iris status --all` remains a passive host query. Discovery records may contain cached, offline devices. The actual
 Device ID, Boot ID and online state must be verified by a handshake at operation time.
 
 ```sh
@@ -126,9 +127,38 @@ When upgrading from a legacy random Device ID to an identity derived from the eF
 Base MAC, refresh saved selectors with `iris list`. Operation history for the old ID
 is retained. Normal and Vibe Mode firmware should use compatible identity rules.
 
+## Project history and evidence
+
+The selected application's `.gateway/` stores `state/gateway.sqlite3`, segmented
+history under `state/events/`, artifacts under `state/artifacts/`, and `gateway.log`.
+It is independent of `build/` and includes a Git ignore file. Host credentials,
+identity/TLS keys, launch locks and cross-project ownership stay on the host;
+copying a project does not copy an active connection or authentication.
+For a read-only/network-mounted project, use `iris run --project ...
+--gateway-data-dir /local/disk/project-gateway`. The local override is remembered
+for that project; stop its Gateway before changing it.
+
+Existing 0.2 history needs explicit relocation. Before an upgrade, finish operations,
+stop the owning Gateway, and back up its complete state (including WAL/SHM files,
+logs, artifacts and event segments) and credentials separately. Opening database
+schema 200/201 upgrades it to 202. Rolling back code alone does not reverse this;
+restore the independent pre-upgrade backups. The old source directory may remain
+the live credentials store, so it is not a rollback backup and must not be deleted
+while in use. Follow the [storage migration guide](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/ESP-Iris/components/esp_iris/tools/README.md#runtime-and-storage-model).
+
+History is bounded and segmented. Default event retention is 7 days, 200,000 rows
+and 512 MiB; durable operation evidence is retained separately. Slow subscribers,
+queue pressure or storage failures can leave explicit history gaps. Inspect health
+and loss indicators instead of assuming retained logs are complete. Large evidence
+exports run as bounded background jobs: the workbench tracks progress, supports
+cancellation, and downloads the completed ZIP. See [retention](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/ESP-Iris/components/esp_iris/tools/README.md#diagnostic-retention-and-storage-failures)
+and [background export](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/ESP-Iris/components/esp_iris/tools/README.md#background-evidence-exports)
+for API contracts. Agents continue using CLI status, logs, operation records and
+saved screenshots for device evidence.
+
 ## Coordination across projects
 
-The shared registry is `esp-mosaico/ownership/ownership.sqlite3` under the current
+The shared registry is `esp-mosaico/0.2/ownership/ownership.sqlite3` under the current
 user's state directory. Linux uses `XDG_STATE_HOME`, or the user's `.local/state`
 when unset; macOS uses Application Support; Windows uses LOCALAPPDATA. Different
 users, hosts or isolated state directories do not share this coordination view.
@@ -196,21 +226,20 @@ A Gateway restart never automatically replays device writes.
 
 ## Legacy instances and external Gateways
 
-Legacy temporary or persistent instances can still be queried. If client details
-are unavailable, this is reported explicitly. New device commands require compatible
-APIs and shared lifecycle capabilities. End an incompatible instance from the terminal
-that originally held it; the tools do not automatically terminate another user's session.
-
-The shared registry retains its old table layout and adds tables for new metadata,
-allowing older tools in other workspaces to coexist. With `--gateway-profile`,
-lifecycle remains externally managed. Connection failure does not fall back to
-a local instance.
+The 0.2 tools use Gateway API 2 and a separate `esp-mosaico/0.2` host state
+namespace. They do not import 0.1 records or take over a live old Gateway.
+Use the original environment and owning terminal to finish its operations and
+release it before migrating; see [workspace migration](workspace-migration.md).
+With `--gateway-profile`, lifecycle remains externally managed. Connection
+failure does not fall back to a local instance.
 
 ## Component boundaries and version policy
 
 The host product tools live in `submodule/esp-mosaico-utils/mosaico-tools`. Vibe Mode
-firmware, reviewed images and the shared persistent ABI belong to `esp-mosaico-recovery`.
-Legacy tool entry points retain forwarding compatibility. The CLI queries local
+firmware, reviewed images and the shared persistent ABI belong to `esp-mosaico-vibe-mode`;
+its source project is `firmware/vibe-mode`. Old forwarding launchers, Python packages
+and build-runner entry points were removed. Update source paths and use fresh build
+caches after migrating. The CLI queries local
 state through the public ESP-Iris host API, without reading its SQLite tables or
 private lock structures.
 

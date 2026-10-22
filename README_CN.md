@@ -7,8 +7,9 @@
 
 ## 创建应用
 
-本工作区最低要求 **Python 3.10**。固件构建固定使用 ESP-IDF `master` 的
+本工作区要求 **Python 3.10+** 和 **Git 2.28+**。固件构建固定使用 ESP-IDF `master` 的
 **`7b9cc1ac79f865983f59bb8ff3ff43eb74ff1dbe`** 提交，目标为 `esp32s31`。
+创建应用不需要 ESP-IDF、开发板、BSP 或游戏引擎。
 系统没有 `python` 命令时，下文使用 `python3`。
 
 ```sh
@@ -16,7 +17,8 @@ git submodule update --init submodule/esp-mosaico-utils
 python mosaico.py project init my_app
 ```
 
-命令从 utils 维护的 Hello World 模板生成 `projects/my_app`，不修改默认工程。
+命令从 utils 维护的 Hello World 模板生成 `projects/my_app`，不修改默认工程，
+并初始化独立 Git 仓库和质量检查配置。
 `--dry-run` 不写文件，已有目标不会被覆盖。详见[工程创建](docs/project-init_CN.md)。
 
 设备安装与维护使用 **Vibe Mode**；底层烧录使用 **ROM Download Mode**。
@@ -46,12 +48,12 @@ GSP 预览与设备使用相同的可移植 C UI 和 GSP 1.5.1 场景。
 | --- | --- |
 | 本工作区 | 入口、配置、Agent 工作流、消费者集成验证 |
 | [utils](https://github.com/esp-mosaico/esp-mosaico-utils) | CLI、Vibe Mode 固件、公共应用组件、Hello World 模板 |
-| [BSP](https://github.com/esp-mosaico/esp-mosaico-bsp) | 板级支持和包含游戏在内的完整示例 |
-| [Raylib Lite Engine](https://github.com/espressif2022/raylib-lite-engine) | 游戏运行时、渲染器、资源工具、Host 模拟器 |
+| [BSP](https://github.com/esp-mosaico/esp-mosaico-bsp) | 产品板级支持和外设示例 |
+| [Raylib Lite Engine](https://github.com/espressif2022/raylib-lite-engine) | 游戏运行时、完整参考游戏、Board 适配器和 Host 模拟器 |
 
-游戏优先使用 Raylib Lite Engine，从 BSP `examples/` 创建，先在仿真器中验证
+游戏优先使用 Raylib Lite Engine，从空白模板或引擎示例创建，先在仿真器中验证
 画面和玩法，见[游戏入口](docs/game-development_CN.md)；
-仅开发游戏时初始化引擎。生成工程使用相对引用：移动或重新克隆整个工作区，
+仅开发游戏时初始化引擎。Hello World 与空白游戏使用相对引用：移动或重新克隆整个工作区，
 初始化固定依赖后重新构建。此布局不提供单应用独立导出或旧工作区路径兼容，
 见[迁移说明](docs/workspace-migration_CN.md)。
 

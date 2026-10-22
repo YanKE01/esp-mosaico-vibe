@@ -9,18 +9,20 @@
 ```text
 mosaico.py
 ├── doctor
-├── project init
+├── project init / sim / package / validate / upload
+├── account login / status / logout
 ├── iris
 │   ├── run / status
 │   ├── list / claim / release / reconcile
 │   ├── takeover start / status / resume / abort / reconcile
 │   ├── logs / memory / crash / rpc
 │   ├── device-status / screenshot / operation-status
+│   ├── operation-reconcile
 │   ├── app-update
 │   ├── system-update
 │   └── test enter-recovery / recovery-wifi / bridge-code
 ├── recover
-└── game create/new/sim/run/build（空白模板、BSP 示例与引擎 Host）
+└── game create/new/sim/run/build（空白模板、引擎示例与 Host）
 ```
 
 模式定义及 AI/Boot 按键区别见[设备模式](device-modes_CN.md)。
@@ -32,9 +34,12 @@ mosaico.py
 | --- | --- |
 | `doctor` | 检查主机环境，不启动 Gateway |
 | `project init <name>` | 根据工作区模板创建应用，不启动 Gateway |
+| `project sim` | 运行应用原生 C UI 后端；显式选择场景或导出图片时仅渲染场景 |
+| `project package/validate/upload` | 离线生成 Ideas ZIP、验证 ZIP，或将已有 ZIP 上传为草稿 |
+| `account login/status/logout` | 管理 Mosaico Ideas 浏览器登录和凭据 |
 | `iris run` | 持续持有一个共享 Gateway 客户端；首次创建时尝试连接唯一设备，Ctrl+C 只释放自身客户端 |
 | `iris status [--all]` | 被动查询本项目或同用户跨工作区 Gateway、使用者及设备归属；不启动、不保活 |
-| `iris list` | 枚举可见端点和已知设备；发现不等于认领或连接 |
+| `iris list` | 通过所选项目 Gateway 枚举端点和设备，必要时启动 Gateway；不认领或连接设备 |
 | `iris claim/release/reconcile` | 认领、释放设备，或显式清理已确认失效的普通归属 |
 | `iris takeover start/status/resume/abort/reconcile` | 请求接管、查询记录、继续验证、撤销或核对归属 |
 | `iris logs` | 显示保留日志并持续跟随；`--snapshot` 只读取保留日志 |
@@ -44,10 +49,11 @@ mosaico.py
 | `iris device-status` | 读取实时设备身份、Boot ID 和固件状态；拒绝缓存或身份不匹配的响应 |
 | `iris screenshot <output>` | 直接保存设备图像并返回图像及操作信息；核对截图前后 Device ID 和 Boot ID 一致 |
 | `iris operation-status <operation-id>` | 查询已有操作并保留其实际状态；不认领设备、不重放操作 |
+| `iris operation-reconcile <operation-id>` | 继续验证；ROM 恢复按原记录中的身份重连，不重复写入或复位 |
 | `iris app-update` | 仅更新正常应用代码，要求完整分区表与设备一致 |
 | `iris system-update` | 新应用、分区布局或资源变化的推荐入口，按更新包清单写入 |
 | `recover` | 初始化或恢复设备基础固件，包括 ESP-Iris 不可达时的恢复 |
-| `game` | 从 BSP 示例创建游戏，调用引擎 Host 仿真或构建，见[游戏开发入口](game-development_CN.md) |
+| `game` | 从空白模板或引擎示例创建游戏，调用 Host 仿真及 native/Iris 构建，见[游戏开发入口](game-development_CN.md) |
 
 `iris test` 下的命令用于分别测试 Vibe Mode 流程：
 
@@ -55,7 +61,26 @@ mosaico.py
 | --- | --- |
 | `enter-recovery` | 正常应用通过 ESP-Iris 响应，重启进入已有 Vibe Mode；等待同一 Device ID 以新的 Boot ID 重连。已经在 Vibe Mode 时返回当前状态 |
 | `recovery-wifi` | 已进入 Vibe Mode 且 ESP-Iris USB 可用；下发 Wi-Fi 名称和密码并等待联网成功 |
-| `bridge-code` | 已进入 Vibe Mode、USB 可用、已配置 Bridge 服务且能够联网；打开设备下载页面，返回配对码、有效期和 Bridge 网站地址 |
+| `bridge-code` | 已进入 Vibe Mode、USB 可用、已配置 Bridge 服务且能够联网；测试旧 Bridge 维护配对接口，返回配对码、有效期和网站地址；与当前六位 Ideas 编号查询分开 |
+
+## Ideas 文件发布
+
+按 `mosaico-ideas/project-release/1` 编写 `mosaico-ideas.json`，先构建应用的
+`.irisfw`。打包将网站内容、固件和中英文设备展示资源冻结为不可变 ZIP：
+
+```sh
+python mosaico.py project package --project projects/my_app --output dist/release.zip
+python mosaico.py project validate dist/release.zip --json
+python mosaico.py account login
+python mosaico.py project upload dist/release.zip --create --yes --json
+# 使用上次上传被接受后返回的当前草稿版本：
+python mosaico.py project upload dist/release.zip --update APPLICATION_ID --expected-project-version 1 --yes --json
+```
+
+package/validate 离线执行；upload 接收已有 ZIP，不重新构建，只创建或替换草稿，
+正式发布是另一步操作。请求回执与幂等状态支持丢失响应后的重试，`--wait-timeout`
+超时保留待验证回执。普通发布不能包含 Vibe Mode 或 bootloader。
+依赖、资源、认证和服务端校验见[文件发布指南](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/mosaico-tools/docs/ideas-file-release/README.zh-CN.md)。
 
 ## 构建工具兼容性与诊断
 
@@ -79,11 +104,11 @@ JSON 中 `idf.version` 是用于判定的版本，`idf.version_source` 标明来
 独立低噪声脚本采用相同的平台默认值，可通过该环境变量显式覆盖。
 关闭 configdep 仍保留 Ninja 增量构建，但修改配置可能重新编译更多源文件。
 
-应用模板和 Vibe Mode 均使用固定版本的独立 GSPC 编译器引导，无需为此安装
-Python `gsp` 模块。首次无缓存时需要下载；离线环境可用 `GSPC_EXECUTABLE`
-指定兼容编译器的绝对路径。应用使用 GSPC 0.6.1 和 ESP-GSP 1.5.1；
-Vibe Mode 独立保持 GSPC 0.5.0 和 ESP-GSP 1.4.0。显式指定的编译器必须与
-当前构建工程的组件版本匹配。
+GSP 应用使用固定版本的独立 GSPC 编译器引导，无需为此安装 Python `gsp`
+模块。首次无缓存时需要下载；离线可用 `GSPC_EXECUTABLE` 指定兼容编译器的
+绝对路径。应用使用 GSPC 0.6.1 和 ESP-GSP 1.5.1；Vibe Mode 使用自己的轻量 UI，
+不依赖 GSP/GSPC。共享下载逻辑位于 utils 的 `shared/gsp`，应用版本由
+`mosaico-tools/gsp-toolchain.json` 固定。
 
 构建错误摘要会包含 configdep 的 `touch_file` 失败原因及后续路径信息；
 无法识别具体原因时回退到 `FAILED:` 上下文。文本错误写入 stderr，JSON 错误
@@ -123,10 +148,11 @@ python mosaico.py iris crash --project projects/my_app --archive
 Vibe Mode 固定前缀和 bootloader。仅预留但未使用的 `game_assets` 不需要镜像；
 使用外部资源的应用通过 CMake 声明将镜像纳入包。已有包可使用 `--bundle PATH`。
 Vibe Mode 自身更新、HTTP(S)/NAND 更新及基础包约束见
-[Vibe Mode 说明](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/esp-mosaico-recovery/firmware/recovery/README.md)。
+[Vibe Mode 说明](https://github.com/esp-mosaico/esp-mosaico-utils/blob/main/esp-mosaico-vibe-mode/firmware/vibe-mode/README.md)。
 
 `app-update` 遇到分区表不同会返回 `partition_layout_mismatch`、设备/构建
 SHA-256 及 `system-update` 建议，不会自动扩大写入范围或修改工程分区表。
+应重新选择更新方式，不得为绕过检查而修改预期分区布局。
 实际构建配置（包括 `--skip-build`）与更新后的应用都须通过角色、产品、板型、
 布局契约和 Recovery ABI 检查。
 
@@ -150,17 +176,28 @@ python mosaico.py iris operation-status <operation-id> --project projects/my_app
 和 Gateway artifact 信息。截图过程中发生重启会导致验证失败；已保存的图像不能证明当前启动状态。
 操作查询可启动或复用项目 Gateway 来读取保留记录，不连接设备。
 `ok: true` 仅表示查询成功；实际结果读取 `operation.status`，包括 `failed` 或 `outcome_unknown`。
+
+ROM 写入完成但 Vibe Mode 验收超时时，执行
+`python mosaico.py iris operation-reconcile <operation-id> --project projects/my_app --json`。
+该命令使用原目标身份和已保存的写入结果，经 Gateway 归属检查后重新连接，验证
+Vibe Mode 身份、启动实例、固件和 OTA 就绪状态，不重复写入或复位。原操作状态保留，
+新增的 `reconciliation.outcome` 仅在证据充分时返回 `observed_success`；证据缺失或
+写入进程仍在运行时不会报告验收成功。
+如果 Gateway 崩溃留下孤立归属，先等待写入进程结束，再通过
+`iris reconcile --device-id <Device-ID> --project projects/my_app`
+清理已确认失效的归属，然后重试 `operation-reconcile`。
+
 浏览器自动化和 CLI/Web 对照用于工作台自身测试或用户明确要求的场景。
 生命周期、设备占用与接管的完整规则见 [Gateway 指南](project-gateway_CN.md)。
 
 排查连接后 normal 与 Vibe Mode 仍均不可达时，使用 `recover`。仅当命令要求
 手动进入 ROM 时，由开发者按[物理入口步骤](device-modes_CN.md#物理入口)执行；
 随后由 Agent 核实 ROM 连接、继续 `recover` 并验证设备和目标应用。
-不得仅为恢复连接擦除整片 Flash，或未经授权覆盖凭据、身份及 Vibe Mode 数据。
+不得仅为恢复连接擦除整片 Flash，或未经授权覆盖凭据、身份、Vibe Mode 数据或分区。
 
 应用烧录和监控避免 USB Serial/JTAG；Gateway 拥有接口时不得并发打开它。
-High-Speed USB 默认交给 ESP-Iris；产品功能需要占用它的 normal 应用应记录例外，
-并通过其他可用传输保留 ESP-Iris 运维和恢复路径。
+Vibe Mode 始终将 High-Speed USB 交给 ESP-Iris，normal 应用默认也如此。
+产品功能需要占用它的 normal 应用应记录例外，并通过其他可用传输保留 ESP-Iris 运维和恢复路径。
 
 ## 旧命令兼容
 
