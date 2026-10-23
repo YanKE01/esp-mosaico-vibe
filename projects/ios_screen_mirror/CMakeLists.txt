@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+set(MOSAICO_BSP_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../submodule/esp-mosaico-bsp" CACHE PATH "ESP-Mosaico BSP checkout")
+set(EXTRA_COMPONENT_DIRS "${MOSAICO_BSP_ROOT}/components/esp-mosaico-bsp")
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(ios_screen_mirror)

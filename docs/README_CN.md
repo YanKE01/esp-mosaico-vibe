@@ -8,6 +8,7 @@
 - [CLI 与设备操作](mosaico-cli_CN.md)
 - [Gateway 与设备归属](project-gateway_CN.md)
 - [游戏创建与仿真](game-development_CN.md)
+- [独立 iOS 投屏工程](ios-screen-mirror.md)
 - [新布局与旧工程迁移](workspace-migration_CN.md)
 
 公共实现、API 和协议资料由所属仓库维护：

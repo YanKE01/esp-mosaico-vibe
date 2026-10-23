@@ -1,0 +1,38 @@
+menu "iOS screen mirror"
+config MIRROR_USB_CONSOLE_WAIT_MS
+    int "Startup wait for USB CDC terminal (milliseconds)"
+    range 0 10000
+    default 3000
+    help
+        Give the host a bounded interval to enumerate and open the USB-HS CDC
+        port before BSP and Wi-Fi logs begin. Startup continues after timeout.
+
+config MIRROR_NAME
+    string "AirPlay receiver name"
+    default "Mosaico Mirror"
+config MIRROR_WIFI_SSID
+    string "Wi-Fi SSID (blank: use saved ESP-IDF station configuration)"
+    default "Redmi_YK"
+config MIRROR_WIFI_PASSWORD
+    string "Wi-Fi password"
+    default "12345678"
+config MIRROR_WIDTH
+    int "Display width advertised to iPhone"
+    range 160 480
+    default 320
+config MIRROR_HEIGHT
+    int "Display height advertised to iPhone"
+    range 160 480
+    default 320
+config MIRROR_FPS
+    int "Refresh rate advertised to iPhone (advisory)"
+    range 5 30
+    default 15
+config MIRROR_MAX_PIXELS
+    int "Maximum coded frame pixels accepted (macroblock aligned)"
+    range 25600 921600
+    default 307200
+    help
+        Bound decoding cost and memory before feeding SPS into esp_h264.
+        The phone may ignore the advertised display size/refresh rate.
+endmenu

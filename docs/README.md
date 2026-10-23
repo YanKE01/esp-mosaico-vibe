@@ -8,6 +8,7 @@
 - [CLI and device operations](mosaico-cli.md)
 - [Gateways and device ownership](project-gateway.md)
 - [Game creation and simulation](game-development.md)
+- [Standalone iOS screen mirror](ios-screen-mirror.md)
 - [New layout and migration of existing projects](workspace-migration.md)
 
 Public implementations, APIs and protocol documentation are maintained by their
